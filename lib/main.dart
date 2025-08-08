@@ -1,4 +1,3 @@
-//4k button without loding
 import 'dart:async';
 import 'dart:io';
 
@@ -190,6 +189,8 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
   bool _isInitialized = false;
   bool _isFullscreen = false;
   bool _showControls = true;
+  bool _isSwitching4K = false;
+  bool _isZoomed = false;  // New zoom state
   Timer? _hideTimer;
 
   @override
@@ -204,7 +205,6 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
         _startHideTimer();
       });
 
-    // Listen to video updates to update UI for progress bar
     _controller.addListener(() {
       if (mounted) setState(() {});
     });
@@ -271,20 +271,36 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
     return "$minutes:$seconds";
   }
 
-  /// This method seeks video 5 seconds back and plays.
-  void _playLast5Seconds() {
-    final currentPos = _controller.value.position;
-    Duration targetPos;
+  void _handleSwitchTo4K() {
+    setState(() {
+      _isSwitching4K = true;
+      _showControls = false;
+    });
 
-    if (currentPos.inSeconds > 5) {
-      targetPos = currentPos - const Duration(seconds: 5);
-    } else {
-      targetPos = Duration.zero;
-    }
+    Future.delayed(const Duration(seconds: 5), () {
+      if (!mounted) return;
 
-    _controller.seekTo(targetPos);
-    _controller.play();
-    _startHideTimer();
+      final currentPos = _controller.value.position;
+      Duration targetPos = currentPos.inSeconds > 5
+          ? currentPos - const Duration(seconds: 5)
+          : Duration.zero;
+
+      _controller.seekTo(targetPos);
+      _controller.play();
+
+      setState(() {
+        _isSwitching4K = false;
+        _showControls = true;
+      });
+
+      _startHideTimer();
+    });
+  }
+
+  void _toggleZoom() {
+    setState(() {
+      _isZoomed = !_isZoomed;
+    });
   }
 
   @override
@@ -301,137 +317,179 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
     return Scaffold(
       appBar: _isFullscreen ? null : AppBar(title: Text(p.basename(widget.videoPath))),
       body: _isInitialized
-          ? GestureDetector(
-              onTap: _toggleControls,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Center(
-                    child: AspectRatio(
-                      aspectRatio: _controller.value.aspectRatio,
-                      child: Stack(
-                        children: [
-                          VideoPlayer(_controller),
-                          Positioned.fill(
-                            child: BackdropFilter(
-                              filter: ImageFilter.blur(sigmaX: 4.0, sigmaY: 4.0),
-                              child: Container(color: Colors.black.withOpacity(0)),
+          ? Stack(
+              alignment: Alignment.center,
+              children: [
+                GestureDetector(
+                  onTap: _toggleControls,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Center(
+                        child: AspectRatio(
+                          aspectRatio: _controller.value.aspectRatio,
+                          child: Transform.scale(
+                            scale: _isZoomed ? 2.0 : 1.0, // Zoom toggle here
+                            child: Stack(
+                              children: [
+                                VideoPlayer(_controller),
+                                Positioned.fill(
+                                  child: BackdropFilter(
+                                    filter: ImageFilter.blur(sigmaX: 4.0, sigmaY: 4.0),
+                                    child: Container(color: Colors.black.withOpacity(0)),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ],
+                        ),
                       ),
-                    ),
-                  ),
-                  if (_showControls)
-                    Positioned(
-                      bottom: 80, // place above buttons
-                      left: 20,
-                      right: 20,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          LinearProgressIndicator(
-                            value: progress,
-                            backgroundColor: Colors.white24,
-                            color: Colors.blueAccent,
-                            minHeight: 4,
-                          ),
-                          const SizedBox(height: 6),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      if (_showControls)
+                        Positioned(
+                          bottom: 80,
+                          left: 20,
+                          right: 20,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(
-                                _formatDuration(position),
-                                style: const TextStyle(color: Colors.white),
+                              LinearProgressIndicator(
+                                value: progress,
+                                backgroundColor: Colors.white24,
+                                color: Colors.blueAccent,
+                                minHeight: 4,
                               ),
-                              Text(
-                                _formatDuration(duration),
-                                style: const TextStyle(color: Colors.white),
+                              const SizedBox(height: 6),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    _formatDuration(position),
+                                    style: const TextStyle(color: Colors.white),
+                                  ),
+                                  Text(
+                                    _formatDuration(duration),
+                                    style: const TextStyle(color: Colors.white),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
-                        ],
-                      ),
-                    ),
-                  if (_showControls)
-                    Positioned(
-                      bottom: 20,
-                      left: 20,
-                      right: 20,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          FloatingActionButton(
-                            heroTag: "rewind",
-                            mini: true,
-                            onPressed: () {
-                              final current = _controller.value.position;
-                              final newPosition = current - const Duration(seconds: 10);
-                              _controller.seekTo(newPosition > Duration.zero ? newPosition : Duration.zero);
-                              _startHideTimer();
-                            },
-                            child: const Icon(Icons.replay_10),
-                          ),
-                          FloatingActionButton(
-                            heroTag: "playpause",
-                            mini: true,
-                            onPressed: () {
-                              setState(() {
-                                if (_controller.value.isPlaying) {
-                                  _controller.pause();
-                                } else {
-                                  _controller.play();
-                                }
-                              });
-                              _startHideTimer();
-                            },
-                            child: Icon(
-                              _controller.value.isPlaying ? Icons.pause : Icons.play_arrow,
-                            ),
-                          ),
-                          FloatingActionButton(
-                            heroTag: "forward",
-                            mini: true,
-                            onPressed: () {
-                              final current = _controller.value.position;
-                              final duration = _controller.value.duration;
-                              final newPosition = current + const Duration(seconds: 10);
-                              _controller.seekTo(newPosition < duration ? newPosition : duration);
-                              _startHideTimer();
-                            },
-                            child: const Icon(Icons.forward_10),
-                          ),
-                          // New 4K button with rounded square shape
-                          FloatingActionButton(
-                            heroTag: "4k_button",
-                            mini: true,
-                            onPressed: _playLast5Seconds,
-                            backgroundColor: Colors.blueAccent,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12), // Rounded corners
-                            ),
-                            child: const Text(
-                              "4K",
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                fontSize: 16,
+                        ),
+                      if (_showControls)
+                        Positioned(
+                          bottom: 20,
+                          left: 20,
+                          right: 20,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              FloatingActionButton(
+                                heroTag: "rewind",
+                                mini: true,
+                                onPressed: () {
+                                  final current = _controller.value.position;
+                                  final newPosition = current - const Duration(seconds: 10);
+                                  _controller.seekTo(newPosition > Duration.zero ? newPosition : Duration.zero);
+                                  _startHideTimer();
+                                },
+                                child: const Icon(Icons.replay_10),
                               ),
-                            ),
+                              FloatingActionButton(
+                                heroTag: "playpause",
+                                mini: true,
+                                onPressed: () {
+                                  setState(() {
+                                    if (_controller.value.isPlaying) {
+                                      _controller.pause();
+                                    } else {
+                                      _controller.play();
+                                    }
+                                  });
+                                  _startHideTimer();
+                                },
+                                child: Icon(
+                                  _controller.value.isPlaying ? Icons.pause : Icons.play_arrow,
+                                ),
+                              ),
+                              FloatingActionButton(
+                                heroTag: "forward",
+                                mini: true,
+                                onPressed: () {
+                                  final current = _controller.value.position;
+                                  final duration = _controller.value.duration;
+                                  final newPosition = current + const Duration(seconds: 10);
+                                  _controller.seekTo(newPosition < duration ? newPosition : duration);
+                                  _startHideTimer();
+                                },
+                                child: const Icon(Icons.forward_10),
+                              ),
+                              FloatingActionButton(
+                                heroTag: "4k_button",
+                                mini: true,
+                                onPressed: _handleSwitchTo4K,
+                                backgroundColor: Colors.blueAccent,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Text(
+                                  "4K",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ),
+                              FloatingActionButton(
+                                heroTag: "zoom_button",
+                                mini: true,
+                                onPressed: _toggleZoom,
+                                backgroundColor: _isZoomed ? Colors.orangeAccent : Colors.blueAccent,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Text(
+                                  "fill",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                              FloatingActionButton(
+                                heroTag: "fullscreen",
+                                mini: true,
+                                onPressed: _toggleFullscreen,
+                                child: Icon(
+                                  _isFullscreen ? Icons.fullscreen_exit : Icons.fullscreen,
+                                ),
+                              ),
+                            ],
                           ),
-                          FloatingActionButton(
-                            heroTag: "fullscreen",
-                            mini: true,
-                            onPressed: _toggleFullscreen,
-                            child: Icon(
-                              _isFullscreen ? Icons.fullscreen_exit : Icons.fullscreen,
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                    ],
+                  ),
+                ),
+                if (_isSwitching4K)
+                  Container(
+                    color: Colors.black54,
+                    alignment: Alignment.center,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        CircularProgressIndicator(
+                          color: Colors.white,
+                        ),
+                        SizedBox(height: 16),
+                        Text(
+                          "Switching to 4K please wait",
+                          style: TextStyle(color: Colors.white, fontSize: 18),
+                        ),
+                      ],
                     ),
-                ],
-              ),
+                  ),
+              ],
             )
           : const Center(child: CircularProgressIndicator()),
     );
