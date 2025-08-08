@@ -41,6 +41,17 @@ flutter pub get
 # Run  
 flutter run  
 
+# Screenshots
+
+![WhatsApp Image 2025-08-08 at 23 55 22_cf4e53c6](https://github.com/user-attachments/assets/b6f94695-5518-46cb-8de0-621e889d9e21) HomePage, Button to select video
+
+![WhatsApp Image 2025-08-08 at 23 55 21_6dd83781](https://github.com/user-attachments/assets/5c21f86c-8229-480a-8033-39b882f3c888) Enhancing Video
+
+![WhatsApp Image 2025-08-08 at 23 55 21_2d65a2be](https://github.com/user-attachments/assets/baf655c3-6a86-475b-bdc9-98d9519ab5b4) Video Player
+
+![WhatsApp Image 2025-08-08 at 23 55 20_0ada6ced](https://github.com/user-attachments/assets/c0904e10-e1fb-44be-af69-d808f6525858) Switching to 4K quality
+
+
 ## Team Contributions
 - Adil Rahiman: Developed the base video player architecture, implemented core playback and compression functionality.  
 - Abhay P: Co-developed the base player, integrated advanced controls like 4K switching and zoom-to-fill, enhanced UI responsiveness and user experience.
