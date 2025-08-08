@@ -1,4 +1,4 @@
-//blur added
+//4k button without loding
 import 'dart:async';
 import 'dart:io';
 
@@ -271,6 +271,22 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
     return "$minutes:$seconds";
   }
 
+  /// This method seeks video 5 seconds back and plays.
+  void _playLast5Seconds() {
+    final currentPos = _controller.value.position;
+    Duration targetPos;
+
+    if (currentPos.inSeconds > 5) {
+      targetPos = currentPos - const Duration(seconds: 5);
+    } else {
+      targetPos = Duration.zero;
+    }
+
+    _controller.seekTo(targetPos);
+    _controller.play();
+    _startHideTimer();
+  }
+
   @override
   Widget build(BuildContext context) {
     final position = _controller.value.position;
@@ -298,7 +314,7 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
                           VideoPlayer(_controller),
                           Positioned.fill(
                             child: BackdropFilter(
-                              filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+                              filter: ImageFilter.blur(sigmaX: 4.0, sigmaY: 4.0),
                               child: Container(color: Colors.black.withOpacity(0)),
                             ),
                           ),
@@ -346,9 +362,14 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
                           FloatingActionButton(
-                            heroTag: "start",
+                            heroTag: "rewind",
                             mini: true,
-                            onPressed: () => _controller.seekTo(Duration.zero),
+                            onPressed: () {
+                              final current = _controller.value.position;
+                              final newPosition = current - const Duration(seconds: 10);
+                              _controller.seekTo(newPosition > Duration.zero ? newPosition : Duration.zero);
+                              _startHideTimer();
+                            },
                             child: const Icon(Icons.replay_10),
                           ),
                           FloatingActionButton(
@@ -374,11 +395,29 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
                             onPressed: () {
                               final current = _controller.value.position;
                               final duration = _controller.value.duration;
-                              final newPosition = current + const Duration(seconds: 2);
+                              final newPosition = current + const Duration(seconds: 10);
                               _controller.seekTo(newPosition < duration ? newPosition : duration);
                               _startHideTimer();
                             },
                             child: const Icon(Icons.forward_10),
+                          ),
+                          // New 4K button with rounded square shape
+                          FloatingActionButton(
+                            heroTag: "4k_button",
+                            mini: true,
+                            onPressed: _playLast5Seconds,
+                            backgroundColor: Colors.blueAccent,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12), // Rounded corners
+                            ),
+                            child: const Text(
+                              "4K",
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                fontSize: 16,
+                              ),
+                            ),
                           ),
                           FloatingActionButton(
                             heroTag: "fullscreen",
