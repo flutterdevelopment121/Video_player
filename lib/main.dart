@@ -156,7 +156,7 @@ class _VideoSelectionPageState extends State<VideoSelectionPage> {
                 children: const [
                   CircularProgressIndicator(),
                   SizedBox(height: 12),
-                  Text("Compressing video, please wait..."),
+                  Text("Enhancing video, Using AI Please wait..."),
                 ],
               )
             : ElevatedButton(
@@ -383,17 +383,19 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                             children: [
-                              FloatingActionButton(
-                                heroTag: "rewind",
-                                mini: true,
-                                onPressed: () {
-                                  final current = _controller.value.position;
-                                  final newPosition = current - const Duration(seconds: 10);
-                                  _controller.seekTo(newPosition > Duration.zero ? newPosition : Duration.zero);
-                                  _startHideTimer();
-                                },
-                                child: const Icon(Icons.replay_10),
-                              ),
+                               FloatingActionButton(
+  heroTag: "forward",
+  mini: true,
+  onPressed: () {
+    final current = _controller.value.position;
+    final duration = _controller.value.duration;
+    final newPosition = current + const Duration(seconds: 2);
+    _controller.seekTo(newPosition < duration ? newPosition : duration);
+    _startHideTimer();
+  },
+  child: const Icon(Icons.replay_10),
+),
+                              
                               FloatingActionButton(
                                 heroTag: "playpause",
                                 mini: true,
@@ -412,17 +414,16 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
                                 ),
                               ),
                               FloatingActionButton(
-                                heroTag: "forward",
-                                mini: true,
-                                onPressed: () {
-                                  final current = _controller.value.position;
-                                  final duration = _controller.value.duration;
-                                  final newPosition = current + const Duration(seconds: 10);
-                                  _controller.seekTo(newPosition < duration ? newPosition : duration);
-                                  _startHideTimer();
-                                },
-                                child: const Icon(Icons.forward_10),
-                              ),
+  heroTag: "rewind",
+  mini: true,
+  onPressed: () {
+    // Always seek back to the start of the video
+    _controller.seekTo(Duration.zero);
+    _startHideTimer();
+  },
+  child: const Icon(Icons.forward_10),
+),
+                             
                               FloatingActionButton(
                                 heroTag: "4k_button",
                                 mini: true,
